@@ -3,6 +3,7 @@
 import os
 import select
 import shutil
+import string
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -191,10 +192,21 @@ class CrosswordGame:
     def _jump_to_first_partially_unfilled_alternating(self) -> bool:
         other = "D" if self.direction == "A" else "A"
         target = self._find_first_partially_unfilled([other, self.direction])
-        if not target:
-            return False
-        self._select_entry(target)
-        return True
+        if target:
+            self._select_entry(target)
+            return True
+
+        # If everything is filled, still alternate direction first on wrap.
+        other_pool = self.down_entries if other == "D" else self.across_entries
+        if other_pool:
+            self._select_entry(other_pool[0])
+            return True
+
+        same_pool = self.across_entries if self.direction == "A" else self.down_entries
+        if same_pool:
+            self._select_entry(same_pool[0])
+            return True
+        return False
 
     def _jump_to_next_partially_unfilled_from_selected(self, step: int = 1) -> bool:
         self._sync_selected_to_cursor()
@@ -306,9 +318,14 @@ class CrosswordGame:
 
         wrapped = (step > 0 and idx == len(pool) - 1) or (step < 0 and idx == 0)
         if wrapped:
-            other_pool = self.down_entries if self.direction == "A" else self.across_entries
+            other_direction = "D" if self.direction == "A" else "A"
+            other_pool = self.down_entries if other_direction == "D" else self.across_entries
             if other_pool:
-                target = other_pool[0] if step > 0 else other_pool[-1]
+                if step > 0:
+                    target = next((e for e in other_pool if self._entry_has_blank(e)), other_pool[0])
+                else:
+                    rev = list(reversed(other_pool))
+                    target = next((e for e in rev if self._entry_has_blank(e)), other_pool[-1])
             else:
                 target = pool[(idx + step) % len(pool)]
         else:
@@ -316,11 +333,11 @@ class CrosswordGame:
 
         self.selected = target
         self.cursor = target.cells[0]
-        if not self._entry_has_blank(target):
+        if not wrapped and not self._entry_has_blank(target):
             self._jump_to_next_partially_unfilled_from_selected(step=step)
 
     def input_letter(self, ch: str) -> None:
-        if not ch.isalpha() or self._is_block(self.cursor):
+        if ch not in string.ascii_letters or self._is_block(self.cursor):
             return
 
         self._sync_selected_to_cursor()
@@ -600,10 +617,10 @@ def play(puz_path: str | Path) -> None:
                     enabled = game.toggle_wrong_progress()
                     message = f"Wrong counter {'on' if enabled else 'hidden'}."
                     continue
-                if char.isalpha():
+                if char in string.ascii_letters:
                     game.input_letter(char)
                     continue
-                message = "Only letters are fillable."
+                message = "Only A-Z letters are fillable."
                 continue
 
             message = "Unrecognized key."
