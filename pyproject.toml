@@ -1,0 +1,15 @@
+﻿[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crossword-cli"
+version = "0.1.0"
+description = "Play .puz crossword puzzles in the terminal"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "crossword-cli contributors" }]
+license = { text = "MIT" }
+
+[project.scripts]
+crossword-cli = "crossword_cli.__main__:main"
