@@ -1,4 +1,4 @@
-﻿[build-system]
+[build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
@@ -12,4 +12,7 @@ authors = [{ name = "crossword-cli contributors" }]
 license = { text = "MIT" }
 
 [project.scripts]
-crossword-cli = "crossword_cli.__main__:main"
+crossword-cli = "src.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["src"]
