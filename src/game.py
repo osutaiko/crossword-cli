@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import os
+import re
 import select
 import shutil
 import string
@@ -527,11 +528,34 @@ def _render_board(game: CrosswordGame) -> list[str]:
 def _fit(line: str, width: int) -> str:
     if width <= 0:
         return ""
-    if len(line) <= width:
+
+    ansi_re = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+    plain = ansi_re.sub("", line)
+    if len(plain) <= width:
         return line
+
     if width <= 3:
-        return line[:width]
-    return line[: width - 3] + "..."
+        target_visible = width
+        suffix = ""
+    else:
+        target_visible = width - 3
+        suffix = "..."
+
+    out: list[str] = []
+    visible = 0
+    i = 0
+    while i < len(line) and visible < target_visible:
+        if line[i] == "\x1b":
+            m = ansi_re.match(line, i)
+            if m:
+                out.append(m.group(0))
+                i = m.end()
+                continue
+        out.append(line[i])
+        visible += 1
+        i += 1
+
+    return "".join(out) + suffix
 
 
 def _render_screen(game: CrosswordGame, message: str) -> str:
